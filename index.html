@@ -68,6 +68,7 @@ dialog input{font:inherit;width:100%;padding:8px;border-radius:8px;border:1px so
 <label>Salario mensual (COP)<input id="sal" type="number" min="0" inputmode="numeric"></label>
 <label>Horas al mes (42 h/sem = 210 · 44 h/sem = 220)<input id="hrs" type="number" min="1" inputmode="numeric"></label>
 <label>Auxilio de transporte mensual (opcional)<input id="aux" type="number" min="0" inputmode="numeric"></label>
+<label>Subsidio de transporte: se consigna en<select id="auxq"><option value="2">la 2.ª quincena (mes completo)</option><option value="1">la 1.ª quincena (mes completo)</option><option value="0">las dos quincenas (mitad en cada una)</option></select></label>
 <label>Descuentos de ley % (opcional; salud + pensión = 8)<input id="dsc" type="number" min="0" step="0.5" inputmode="decimal"></label>
 <div style="font-weight:600;margin-top:6px">Horario de cada turno</div><div id="tms"></div>
 <div class="act"><button id="cc">Cancelar</button><button id="cs" style="background:var(--acc);color:#fff">Guardar</button></div></dialog>
@@ -127,7 +128,7 @@ function report(f,t){
  const pmx=payMap(),qs=[['Quincena','Días trabajados','Salario quincenal','Auxilio transporte','Recargos','Horas extras','Total bruto','Descuentos','Neto estimado','Recargos y extras generados entre'].map(H)];
  Object.keys(qk).forEach(k=>{const [y,m,q]=qk[k],a=q===1?1:16,b=q===1?15:new Date(y,m+1,0).getDate();let vr=0,ve=0,dias=0;
   for(let i=a;i<=b;i++){if(dayAgg(new Date(y,m,i)).wk)dias++}const o=pmx[y+'-'+m+'-'+q]||{vr:0,ve:0};vr=o.vr;ve=o.ve;
-  const r=qn(vr,ve);qs.push([q+'.ª quincena de '+MN(m)+' '+y+' ('+a+'–'+b+')',dias,{v:r.sal,s:2},{v:r.aux,s:2},{v:r.vr,s:2},{v:r.ve,s:2},{v:r.g,s:2},{v:r.d,s:2},{v:r.net,s:4},o.f?fd(pd(o.f))+' a '+fd(pd(o.t)):''])});
+  const r=qn(vr,ve,q);qs.push([q+'.ª quincena de '+MN(m)+' '+y+' ('+a+'–'+b+')',dias,{v:r.sal,s:2},{v:r.aux,s:2},{v:r.vr,s:2},{v:r.ve,s:2},{v:r.g,s:2},{v:r.d,s:2},{v:r.net,s:4},o.f?fd(pd(o.f))+' a '+fd(pd(o.t)):''])});
  const aj=[['Dato','Valor'].map(H),['Periodo',fd(f)+' a '+fd(t)],['Salario mensual',{v:CFG.sal,s:2}],['Horas al mes',CFG.hrs],['Valor hora ordinaria',{v:base,s:2}],['Noche','7:00 p. m. a 6:00 a. m.'],['Nota','En recargos se suma solo el adicional (el salario ya cubre la hora); en horas extras se paga la hora completa con su porcentaje. Es un estimado, no una liquidación.']];
  return{s:[sum,qs,det,des,aj],w:[[18,12,12,10,12,12,12,15,15,15],[36,10,15,15,15,15,15,15,16,26],[12,6,12,8,11,10].concat(ks.map(()=>14),[15,15,15,15,34]),[34,34,11,10,16,14],[24,70]],tot:T}}
 const colL=n=>{let s='';n++;while(n){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=Math.floor((n-1)/26)}return s};
@@ -165,7 +166,7 @@ $('rf').onchange=$('rt').onchange=upd;$('rc').onclick=()=>$('repd').close();
 $('rd').onclick=()=>{const R=upd();if(!R)return;const a=document.createElement('a');a.href=URL.createObjectURL(xlsx(R));a.download='reporte-turnos_'+$('rf').value+'_a_'+$('rt').value+'.xlsx';document.body.appendChild(a);a.click();a.remove()};
 const PAL=['#d7c6f2','#f7c6d9','#c6e0f7','#e6d8b0','#f2c6b4','#b9ecd0'],isC=id=>/^C\d/.test(id||'');
 function applyC(){for(let i=SH.length-1;i>=0;i--)if(isC(SH[i].id))SH.splice(i,1);
- const at=SH.findIndex(x=>x.id==='D')+1,hh=x=>{const p=x.split(':');return +p[0]+(+p[1]?':'+p[1]:'')};
+ const at=SH.findIndex(x=>x.id==='N')+1,hh=x=>{const p=x.split(':');return +p[0]+(+p[1]?':'+p[1]:'')};
  CFG.custom.forEach((c,j)=>{SH.splice(at+j,0,{id:c.id,l:hh(c.a)+'-'+hh(c.b),n:c.n,c:c.c});CFG.t[c.id]=[c.a,c.b]})}
 CFG.custom=CFG.custom||[];applyC();
 const hrow=c=>'<div class="hr"><input class="hn" placeholder="Nombre (ej. Apoyo)" maxlength="18" value="'+esc(c.n)+'" data-id="'+c.id+'" data-c="'+c.c+'"><div class="tr2"><input type="time" class="ha" value="'+c.a+'"><input type="time" class="hb" value="'+c.b+'"><button class="hx">🗑</button></div></div>';
@@ -181,7 +182,7 @@ $('hs').onclick=()=>{const old=CFG.custom.map(c=>c.id),L=[];
 $('hc').onclick=()=>$('hd').close();
 const RLg=['rn','rd','rdn'],ELg=['ed','en','edd','edn'],bs=()=>CFG.sal>0?CFG.sal/CFG.hrs:0,vv=(A,l)=>l.reduce((s,k)=>s+(A[k]||0)/60*bs()*P[k],0),cop2=v=>'$'+Math.round(v/1000)+'k';
 function dayVal(i){const x=dayAgg(new Date(Y,M,i));return CFG.sal>0&&x.wk?CFG.sal/30+vv(x.A,RLg)+vv(x.A,ELg):0}
-function qn(vr,ve){const sal=CFG.sal/2,aux=(CFG.aux||0)/2,g=sal+vr+ve,d=g*(CFG.dsc||0)/100;return{sal,aux,vr,ve,g,d,net:g+aux-d}}
+function qn(vr,ve,q){const m=CFG.auxq||'2',AX=CFG.aux||0,aux=m==='0'?AX/2:(String(q)===m?AX:0),sal=CFG.sal/2,g=sal+vr+ve,d=g*(CFG.dsc||0)/100;return{sal,aux,vr,ve,g,d,net:g+aux-d}}
 const qOf=d=>d.getFullYear()+'-'+d.getMonth()+'-'+(d.getDate()<=15?1:2),nextQ=k=>{const a=k.split('-').map(Number),y=a[0],m=a[1];return a[2]===1?y+'-'+m+'-2':(m===11?(y+1)+'-0-1':y+'-'+(m+1)+'-1')},ql=k=>{const a=k.split('-').map(Number);return a[2]+'.ª quincena de '+new Date(a[0],a[1],1).toLocaleDateString('es',{month:'long'})+' '+a[0]};
 function payQ(d){const s=iso(d),p=(CFG.per||[]).find(p=>s>=p.f&&s<=p.t);if(p)return p.q;const k=qOf(d);return CFG.lag===0?k:nextQ(k)}
 function payMap(){const R={};Object.keys(data).forEach(k=>{const d=pd(k),x=dayAgg(d),vr=vv(x.A,RLg),ve=vv(x.A,ELg);if(!vr&&!ve)return;const q=payQ(d),o=R[q]||(R[q]={vr:0,ve:0,f:k,t:k});o.vr+=vr;o.ve+=ve;if(k<o.f)o.f=k;if(k>o.t)o.t=k});return R}
@@ -199,15 +200,15 @@ $('pc').onclick=()=>$('perd').close();$('pb').onclick=openP;
 function quin(){if(!(CFG.sal>0)){$('qn').innerHTML='';return}
  const n=new Date(Y,M+1,0).getDate(),mn=new Date(Y,M,1).toLocaleDateString('es',{month:'short'}),pm=payMap(),pre=Y+'-'+M+'-';let h='<h2 style="margin-top:14px">Pago por quincena</h2>';
  [[1,15],[16,n]].forEach((q,qi)=>{let dias=0;for(let i=q[0];i<=q[1];i++)if(dayAgg(new Date(Y,M,i)).wk)dias++;
-  const o=pm[pre+(qi+1)]||{vr:0,ve:0},r=qn(o.vr,o.ve);
+  const o=pm[pre+(qi+1)]||{vr:0,ve:0},r=qn(o.vr,o.ve,qi+1);
   h+='<div class="row"><b>'+(qi+1)+'.ª quincena ('+q[0]+'–'+q[1]+' '+mn+')</b><span class="big" style="font-size:20px">'+cop(r.net)+'</span></div><div class="note" style="margin:0 0 8px">'+dias+' días trabajados · salario '+cop(r.sal)+(r.aux?' · auxilio '+cop(r.aux):'')+' · recargos '+cop(r.vr)+' · extras '+cop(r.ve)+(o.f?' (generados del '+fd(pd(o.f))+' al '+fd(pd(o.t))+')':'')+(r.d?' · descuentos −'+cop(r.d):'')+'</div>'});
  let pen=0;Object.keys(data).forEach(k=>{if(k.slice(0,7)!==Y+'-'+String(M+1).padStart(2,'0'))return;const d=pd(k),q=payQ(d);if(q!==pre+'1'&&q!==pre+'2'){const x=dayAgg(d);pen+=vv(x.A,RLg)+vv(x.A,ELg)}});
  if(pen)h+='<div class="row"><span>Generado este mes, se paga en otra quincena</span><b>'+cop(pen)+'</b></div>';
- $('qn').innerHTML=h+'<div class="note">Estimado = salario ÷ 2 + los recargos y extras que tu empresa paga en esa quincena (según tus fechas de reporte)'+(CFG.aux?' + auxilio ÷ 2':'')+(CFG.dsc?' − descuentos':'')+'. Cada día trabajado vale salario ÷ 30 más lo que sume ese día.</div>'}
-$('gear').onclick=()=>{$('sal').value=CFG.sal||'';$('aux').value=CFG.aux||'';$('dsc').value=CFG.dsc||'';$('hrs').value=CFG.hrs;$('tms').innerHTML=['M','T','N','D'].map(id=>{const s=SH.find(x=>x.id===id);return '<div class="tr"><b>'+s.l+'</b><input type="time" data-id="'+id+'" data-i="0" value="'+CFG.t[id][0]+'"><input type="time" data-id="'+id+'" data-i="1" value="'+CFG.t[id][1]+'"></div>'}).join('');$('cfgd').showModal()};
+ $('qn').innerHTML=h+'<div class="note">Estimado = salario ÷ 2 + los recargos y extras que tu empresa paga en esa quincena (según tus fechas de reporte)'+(CFG.aux?' + subsidio de transporte en la quincena que elegiste':'')+(CFG.dsc?' − descuentos':'')+'. Cada día trabajado vale salario ÷ 30 más lo que sume ese día.</div>'}
+$('gear').onclick=()=>{$('sal').value=CFG.sal||'';$('aux').value=CFG.aux||'';$('dsc').value=CFG.dsc||'';$('auxq').value=CFG.auxq||'2';$('hrs').value=CFG.hrs;$('tms').innerHTML=['M','T','N'].map(id=>{const s=SH.find(x=>x.id===id);return '<div class="tr"><b>'+s.l+'</b><input type="time" data-id="'+id+'" data-i="0" value="'+CFG.t[id][0]+'"><input type="time" data-id="'+id+'" data-i="1" value="'+CFG.t[id][1]+'"></div>'}).join('');$('cfgd').showModal()};
 $('cc').onclick=()=>$('cfgd').close();
-$('cs').onclick=()=>{CFG.sal=parseFloat($('sal').value)||0;CFG.hrs=parseFloat($('hrs').value)||210;CFG.aux=parseFloat($('aux').value)||0;CFG.dsc=parseFloat($('dsc').value)||0;document.querySelectorAll('#tms input').forEach(e=>{if(e.value)CFG.t[e.dataset.id][+e.dataset.i]=e.value});try{localStorage.setItem('turnos-cfg',JSON.stringify(CFG))}catch(e){}$('cfgd').close();render()};
-function brushes(){$('brushes').innerHTML='';SH.forEach(s=>{const b=document.createElement('button');b.textContent=s.n;b.style.background=s.c;if(s.id===brush)b.className='on';b.onclick=()=>{brush=s.id;render()};$('brushes').appendChild(b)});const m=document.createElement('button');m.textContent='＋ Mis horarios';m.style.cssText='border-style:dashed;color:var(--fg)';m.onclick=openH;$('brushes').appendChild(m)}
+$('cs').onclick=()=>{CFG.sal=parseFloat($('sal').value)||0;CFG.hrs=parseFloat($('hrs').value)||210;CFG.aux=parseFloat($('aux').value)||0;CFG.dsc=parseFloat($('dsc').value)||0;CFG.auxq=$('auxq').value;document.querySelectorAll('#tms input').forEach(e=>{if(e.value)CFG.t[e.dataset.id][+e.dataset.i]=e.value});try{localStorage.setItem('turnos-cfg',JSON.stringify(CFG))}catch(e){}$('cfgd').close();render()};
+function brushes(){$('brushes').innerHTML='';SH.forEach(s=>{if(s.id==='D')return;const b=document.createElement('button');b.textContent=s.n;b.style.background=s.c;if(s.id===brush)b.className='on';b.onclick=()=>{brush=s.id;render()};$('brushes').appendChild(b)});const m=document.createElement('button');m.textContent='＋ Mis horarios';m.style.cssText='border-style:dashed;color:var(--fg)';m.onclick=openH;$('brushes').appendChild(m)}
 function render(){
  $('mP').className=mode==='P'?'on':'';$('mE').className=mode==='E'?'on':'';
  $('brushes').style.display=mode==='P'?'flex':'none';
