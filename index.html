@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2a7f7a">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Mis turnos</title>
+<style>
+:root{--bg:#f2f2f2;--fg:#1b1f23;--card:#fff;--mut:#6b7280;--line:#d6d9dd;--acc:#2a7f7a;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15181c;--fg:#eceff3;--card:#20242a;--mut:#9aa3ad;--line:#343a42;--acc:#5fc2bb}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;max-width:520px;margin:auto;padding:10px}
+.top{display:flex;align-items:center;justify-content:space-between;margin:6px 0}
+.top h1{font-size:20px;margin:0;text-transform:capitalize}
+button{font:inherit;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+.modes{display:flex;gap:6px;margin:8px 0}
+.modes button{flex:1;font-weight:600}
+.modes .on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.dow,.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.dow div{text-align:center;font-size:12px;color:var(--mut);padding:2px 0}
+.day{min-height:62px;border-radius:8px;padding:3px 4px;background:#fff;border:1px solid var(--line);display:flex;flex-direction:column;justify-content:space-between;color:#1b1f23;cursor:pointer;user-select:none}
+.day.empty{visibility:hidden}
+.day .n{font-size:17px;font-weight:800;text-align:right;color:#000;line-height:1.1}.day.dom .n{color:#b00020}
+.day .t{text-align:center;font-weight:600;font-size:13px}
+.day .o{font-size:11px;text-align:center;font-weight:700;background:#000a;color:#fff;border-radius:6px}
+.day.today .n{color:#fff;background:#d00;border-radius:10px;padding:0 7px;align-self:flex-end}
+.brushes{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.brushes button{border-width:2px;color:#1b1f23;font-weight:600;font-size:14px}
+.brushes button.on{border-color:var(--fg);outline:2px solid var(--acc)}
+.hint{font-size:13px;color:var(--mut);margin:4px 0}
+.sum{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:12px}
+.sum h2{font-size:16px;margin:0 0 8px}
+.row{display:flex;justify-content:space-between;padding:3px 0;font-size:15px}
+.big{font-size:26px;font-weight:800;color:var(--acc)}
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--fg);width:min(92vw,360px)}
+dialog input{font:inherit;width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);margin:6px 0}
+.qa{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.act{display:flex;gap:6px;justify-content:flex-end;margin-top:8px}
+.tr{display:grid;grid-template-columns:64px 1fr 1fr;gap:6px;align-items:center;margin:4px 0}.chk{display:flex;align-items:center;margin:6px 0}dialog input[type=checkbox]{width:auto;margin:0 8px 0 0}.note{font-size:12px;color:var(--mut);margin-top:8px}.tot{border-top:1px solid var(--line);margin-top:6px;padding-top:6px;font-weight:700}</style></head><body>
+<div class="top"><button id="prev">‹</button><h1 id="title"></h1><button id="next">›</button><button id="gear">⚙️</button></div>
+<div class="modes"><button id="mP" class="on">🎨 Pintar turnos</button><button id="mE">⏱ Horas extras</button></div>
+<div class="brushes" id="brushes"></div>
+<div class="hint" id="hint"></div>
+<div class="dow"><div>DOM</div><div>LUN</div><div>MAR</div><div>MIÉ</div><div>JUE</div><div>VIE</div><div>SÁB</div></div>
+<div class="grid" id="grid"></div>
+<div class="sum"><h2>Resumen del mes</h2>
+<div class="row"><span>Horas extras</span><span class="big" id="ot">0</span></div>
+<div id="pay"></div><div id="cnt"></div></div>
+<dialog id="dlg"><div id="dt" style="font-weight:700"></div>
+<div style="margin-top:6px;font-size:13px;color:var(--mut)">Turno del día</div><div class="qa" id="ds"></div>
+<label>Horas extras ese día<input id="oh" type="number" min="0" step="0.5" inputmode="decimal"></label>
+<div class="qa"><button data-h="0">0</button><button data-h="1">1</button><button data-h="2">2</button><button data-h="3">3</button><button data-h="4">4</button></div>
+<label>Nota (opcional)<input id="on" type="text" maxlength="80"></label>
+<label class="chk"><input id="of" type="checkbox">Día festivo (los domingos cuentan solos)</label>
+<div id="pv" class="sum" style="margin:6px 0;padding:8px"></div><div class="act"><button id="cx">Cancelar</button><button id="ok" style="background:var(--acc);color:#fff">Guardar</button></div></dialog>
+<dialog id="cfgd"><div style="font-weight:700">Ajustes de pago</div>
+<label>Salario mensual (COP)<input id="sal" type="number" min="0" inputmode="numeric"></label>
+<label>Horas al mes (42 h/sem = 210 · 44 h/sem = 220)<input id="hrs" type="number" min="1" inputmode="numeric"></label>
+<div style="font-weight:600;margin-top:6px">Horario de cada turno</div><div id="tms"></div>
+<div class="act"><button id="cc">Cancelar</button><button id="cs" style="background:var(--acc);color:#fff">Guardar</button></div></dialog>
+<script>
+const SH=[{id:'M',l:'M',n:'Mañana',c:'#fff59a'},{id:'T',l:'T',n:'Tarde',c:'#ffcf8a'},{id:'N',l:'N',n:'Noche',c:'#7ecdc8'},{id:'D',l:'6 a 6',n:'Día 6 a 6',c:'#cfe3a8'},{id:'L',l:'Libre',n:'Libre',c:'#c8e8cf'},{id:'V',l:'Vac.',n:'Vacaciones',c:'#f6937a'},{id:'F',l:'',n:'★ Festivo',c:'#ffd6e7'},{id:'X',l:'',n:'Borrar',c:'#e6e6e6'}];
+const KEY='turnos-v1';let data={};
+try{data=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){}}
+let d=new Date();let Y=d.getFullYear(),M=d.getMonth(),mode='P',brush='N',sel=null;
+const $=id=>document.getElementById(id);
+const key=(y,m,dd)=>y+'-'+String(m+1).padStart(2,'0')+'-'+String(dd).padStart(2,'0');
+const CFG=(()=>{try{return JSON.parse(localStorage.getItem('turnos-cfg'))}catch(e){return null}})()||{sal:0,hrs:210,t:{M:['06:00','14:00'],T:['14:00','22:00'],N:['22:00','06:00'],D:['06:00','18:00']}};
+const mins=x=>{const p=x.split(':');return +p[0]*60+ +p[1]};
+const P={rn:.35,rd:.9,rdn:1.25,ed:1.25,en:1.75,edd:2.15,edn:2.65};
+const LB={rn:'Recargo nocturno (+35%)',rd:'Dominical/festivo diurno (+90%)',rdn:'Dominical/festivo nocturno (+125%)',ed:'Extra diurna (+25%)',en:'Extra nocturna (+75%)',edd:'Extra diurna dom/fest (+115%)',edn:'Extra nocturna dom/fest (+165%)'};
+const cop=v=>'$'+Math.round(v).toLocaleString('es-CO');
+function run(i,a,dur,f){for(let m=0;m<dur;m++){const dt=new Date(Y,M,i,0,a+m),h=dt.getHours(),k=key(dt.getFullYear(),dt.getMonth(),dt.getDate());f(h>=19||h<6,dt.getDay()===0||!!(data[k]||{}).f)}}
+function pay(only){
+ const base=CFG.sal>0?CFG.sal/CFG.hrs:0,A={},n=new Date(Y,M+1,0).getDate();
+ const inc=k=>A[k]=(A[k]||0)+1;
+ for(let i=only||1;i<=(only||n);i++){const r=data[key(Y,M,i)]||{},t=CFG.t[r.s];let end=360;
+  if(t){const a=mins(t[0]),dur=(mins(t[1])-a+1440)%1440||1440;end=a+dur;run(i,a,dur,(nt,d)=>{const k=d?(nt?'rdn':'rd'):(nt?'rn':null);if(k)inc(k)})}
+  if(r.o)run(i,end,Math.round(r.o*60),(nt,d)=>inc(d?(nt?'edn':'edd'):(nt?'en':'ed')))}
+ let h='',tot=0;
+ Object.keys(P).forEach(k=>{if(!A[k])return;const v=A[k]/60*base*P[k];tot+=v;h+='<div class="row"><span>'+LB[k]+' · '+(A[k]/60).toFixed(1).replace('.0','')+' h</span><span>'+(base?cop(v):'')+'</span></div>'});
+ if(!base)h+='<div class="note">Pon tu salario en ⚙️ para ver los valores en pesos.</div>';
+ else h+='<div class="row tot"><span>Total extras y recargos</span><span>'+cop(tot)+'</span></div><div class="note">Valor de la hora ordinaria: '+cop(base)+'. En recargos se suma solo el adicional (el salario ya cubre la hora); en extras se suma la hora completa. Es un estimado, no una liquidación.</div>';
+ if(only)return h.split('<div class="note">')[0];$('pay').innerHTML=h}
+let dsh=null;
+function mkds(){$('ds').innerHTML='';['M','T','N'].forEach(id=>{const s=SH.find(x=>x.id===id),b=document.createElement('button');b.textContent=s.n;b.style.cssText='background:'+s.c+';color:#1b1f23;border:3px solid '+(dsh===id?'#000':'transparent');b.onclick=()=>{dsh=dsh===id?null:id;mkds();prev()};$('ds').appendChild(b)})}
+function prev(){const old=data[sel];data[sel]=Object.assign({},old||{},{s:dsh||undefined,o:parseFloat($('oh').value)||undefined,f:$('of').checked||undefined});const h=pay(+sel.slice(8));if(old)data[sel]=old;else delete data[sel];$('pv').innerHTML='<b>Cálculo del día</b>'+(h||'<div class="note">Sin recargos ni extras.</div>')+(CFG.sal>0?'':'<div class="note">Pon tu salario en ⚙️ para ver pesos.</div>')}
+$('oh').oninput=prev;$('of').onchange=prev;
+$('gear').onclick=()=>{$('sal').value=CFG.sal||'';$('hrs').value=CFG.hrs;$('tms').innerHTML=['M','T','N','D'].map(id=>{const s=SH.find(x=>x.id===id);return '<div class="tr"><b>'+s.l+'</b><input type="time" data-id="'+id+'" data-i="0" value="'+CFG.t[id][0]+'"><input type="time" data-id="'+id+'" data-i="1" value="'+CFG.t[id][1]+'"></div>'}).join('');$('cfgd').showModal()};
+$('cc').onclick=()=>$('cfgd').close();
+$('cs').onclick=()=>{CFG.sal=parseFloat($('sal').value)||0;CFG.hrs=parseFloat($('hrs').value)||210;document.querySelectorAll('#tms input').forEach(e=>{if(e.value)CFG.t[e.dataset.id][+e.dataset.i]=e.value});try{localStorage.setItem('turnos-cfg',JSON.stringify(CFG))}catch(e){}$('cfgd').close();render()};
+function brushes(){$('brushes').innerHTML='';SH.forEach(s=>{const b=document.createElement('button');b.textContent=s.n;b.style.background=s.c;if(s.id===brush)b.className='on';b.onclick=()=>{brush=s.id;render()};$('brushes').appendChild(b)})}
+function render(){
+ $('mP').className=mode==='P'?'on':'';$('mE').className=mode==='E'?'on':'';
+ $('brushes').style.display=mode==='P'?'flex':'none';
+ $('hint').textContent=mode==='P'?'Elige un turno y toca los días para pintarlos.':'Toca un día para registrar sus horas extras.';
+ brushes();
+ $('title').textContent=new Date(Y,M,1).toLocaleDateString('es',{month:'long',year:'numeric'});
+ const g=$('grid');g.innerHTML='';const first=new Date(Y,M,1).getDay(),n=new Date(Y,M+1,0).getDate();
+ for(let i=0;i<first;i++){const e=document.createElement('div');e.className='day empty';g.appendChild(e)}
+ const td=new Date();let ot=0,cnt={};
+ for(let i=1;i<=n;i++){const k=key(Y,M,i),r=data[k]||{},s=SH.find(x=>x.id===r.s);
+  const c=document.createElement('div');c.className='day'+(td.getFullYear()===Y&&td.getMonth()===M&&td.getDate()===i?' today':'')+(new Date(Y,M,i).getDay()===0||r.f?' dom':'');
+  if(s)c.style.background=s.c;
+  c.innerHTML='<div class="n">'+(r.f?'★ ':'')+i+'</div><div class="t">'+(s?s.l:'')+'</div>'+(r.o?'<div class="o">+'+r.o+'h</div>':'<div></div>');
+  if(r.o)ot+=r.o;if(s)cnt[s.n]=(cnt[s.n]||0)+1;
+  c.onclick=()=>tap(i);g.appendChild(c)}
+ $('ot').textContent=ot+' h';pay();
+ $('cnt').innerHTML=Object.entries(cnt).map(([a,b])=>'<div class="row"><span>'+a+'</span><span>'+b+' días</span></div>').join('');
+}
+function tap(i){const k=key(Y,M,i);
+ if(mode==='P'){if(brush==='X'){if(data[k]){delete data[k].s;if(!data[k].o&&!data[k].t&&!data[k].f)delete data[k]}}else if(brush==='F'){const r=data[k]||{};r.f=r.f?undefined:true;data[k]=r;if(!r.s&&!r.o&&!r.t&&!r.f)delete data[k]}else{data[k]=Object.assign(data[k]||{},{s:brush})}save();render()}
+ else{sel=k;const r=data[k]||{};$('dt').textContent=i+' de '+new Date(Y,M,1).toLocaleDateString('es',{month:'long'});$('oh').value=r.o||'';$('on').value=r.t||'';$('of').checked=!!r.f;dsh=r.s||null;mkds();prev();$('dlg').showModal()}}
+$('ok').onclick=()=>{const h=parseFloat($('oh').value)||0,t=$('on').value.trim();const r=data[sel]||{};r.o=h>0?h:undefined;r.t=t||undefined;r.f=$('of').checked||undefined;r.s=dsh||undefined;data[sel]=r;if(!r.s&&!r.o&&!r.t&&!r.f)delete data[sel];save();$('dlg').close();render()};
+$('cx').onclick=()=>$('dlg').close();
+document.querySelectorAll('.qa button').forEach(b=>b.onclick=()=>{$('oh').value=b.dataset.h;prev()});
+$('mP').onclick=()=>{mode='P';render()};$('mE').onclick=()=>{mode='E';render()};
+$('prev').onclick=()=>{M--;if(M<0){M=11;Y--}render()};
+$('next').onclick=()=>{M++;if(M>11){M=0;Y++}render()};
+render();
+</script><script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}</script>
+</body></html>

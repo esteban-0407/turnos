@@ -1,0 +1,17 @@
+MIS TURNOS - App instalable (PWA)
+
+OPCION A - Netlify (la más fácil, gratis)
+1. Entra a app.netlify.com/drop (crea cuenta gratis si te la pide).
+2. Descomprime este zip y arrastra la CARPETA con los archivos a esa página.
+3. Te da un enlace https://... Ábrelo en Chrome del teléfono.
+4. Menú (3 puntos) > "Instalar app" o "Añadir a la pantalla de inicio".
+
+OPCION B - GitHub Pages
+1. Crea un repositorio nuevo y sube todos los archivos (index.html, manifest.webmanifest, sw.js y la carpeta icons).
+2. Settings > Pages > Deploy from a branch > main > / (root).
+3. Abre el enlace en Chrome y elige "Instalar app".
+
+Notas:
+- Funciona sin internet después de la primera carga.
+- Los datos se guardan en el teléfono (almacenamiento del navegador). Si borras los datos de Chrome o desinstalas la app, se pierden.
+- Para ver cambios después de actualizar los archivos, cambia el nombre en sw.js (const C='turnos-v1' a 'turnos-v2').
