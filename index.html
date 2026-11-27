@@ -20,7 +20,7 @@ button{font:inherit;color:inherit;background:var(--card);border:1px solid var(--
 .modes .on{background:var(--acc);color:#fff;border-color:var(--acc)}
 .dow,.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
 .dow div{text-align:center;font-size:12px;color:var(--mut);padding:2px 0}
-.dialog-x{}dialog{max-height:90vh}dialog select{font:inherit;width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);margin:4px 0}.day .v{font-size:11px;text-align:center;font-weight:700;color:#0b4f4a}.day{min-height:74px;border-radius:8px;padding:3px 4px;background:#fff;border:1px solid var(--line);display:flex;flex-direction:column;justify-content:space-between;color:#1b1f23;cursor:pointer;user-select:none}
+.dialog-x{}dialog{max-height:90vh}dialog select{font:inherit;width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);margin:4px 0}.g4,.g3{display:grid;gap:4px;font-size:12.5px;padding:4px 0;border-bottom:1px solid var(--line);align-items:center}.g4{grid-template-columns:1.7fr .8fr .9fr 1fr}.g3{grid-template-columns:1.5fr 1fr 1fr}.g4 span+span,.g3 span+span{text-align:right}.day .v{font-size:11px;text-align:center;font-weight:700;color:#0b4f4a}.day{min-height:74px;border-radius:8px;padding:3px 4px;background:#fff;border:1px solid var(--line);display:flex;flex-direction:column;justify-content:space-between;color:#1b1f23;cursor:pointer;user-select:none}
 .day.empty{visibility:hidden}
 .day .n{font-size:17px;font-weight:800;text-align:right;color:#000;line-height:1.1}.day.dom .n{color:#b00020}
 .day .t{text-align:center;font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden}.hr{border-bottom:1px solid var(--line);padding:6px 0}.tr2{display:grid;grid-template-columns:1fr 1fr auto;gap:6px;align-items:center}
@@ -47,14 +47,20 @@ dialog input{font:inherit;width:100%;padding:8px;border-radius:8px;border:1px so
 <div class="grid" id="grid"></div>
 <div class="sum"><h2>Resumen del mes</h2>
 <div class="row"><span>Horas extras</span><span class="big" id="ot">0</span></div>
-<div id="pay"></div><div id="cnt"></div><div id="qn"></div><button id="pb" style="margin-top:8px;width:100%">📅 Fechas de reporte y pago de extras</button></div>
+<div id="pay"></div><div id="cnt"></div><div id="qn"></div><button id="pb" style="margin-top:8px;width:100%">📅 Fechas de reporte y pago de extras</button><button id="prb" style="margin-top:8px;width:100%">🎁 Primas y prestaciones (promedios)</button></div>
 <dialog id="dlg"><div id="dt" style="font-weight:700"></div>
 <div style="margin-top:6px;font-size:13px;color:var(--mut)">Turno del día</div><div class="qa" id="ds"></div>
 <label>Horas extras ese día<input id="oh" type="number" min="0" step="0.5" inputmode="decimal"></label>
+<label>Las extras empiezan a las (vacío = al terminar el turno)<input id="ohs" type="time"></label>
+<div class="qb"><button id="e1">🌙 Extra 6 pm–6 am</button><button id="e2">☀️ Extra 6 am–6 pm</button></div>
 <div class="qa"><button data-h="0">0</button><button data-h="1">1</button><button data-h="2">2</button><button data-h="3">3</button><button data-h="4">4</button></div>
 <label>Nota (opcional)<input id="on" type="text" maxlength="80"></label>
 <label class="chk"><input id="of" type="checkbox">Día festivo (los domingos cuentan solos)</label>
 <div id="pv" class="sum" style="margin:6px 0;padding:8px"></div><div class="act"><button id="cx">Cancelar</button><button id="ok" style="background:var(--acc);color:#fff">Guardar</button></div></dialog>
+<dialog id="prd" style="width:min(96vw,460px)"><div style="font-weight:700">Primas y prestaciones</div>
+<label>Semestre<select id="psem"></select></label>
+<div class="tr2" style="grid-template-columns:1fr 1fr"><label style="font-size:12px">Meses con datos (para el promedio)<input id="pmes" type="number" min="1" max="6" inputmode="numeric"></label><label style="font-size:12px">Días a liquidar (máx. 180)<input id="pdias" type="number" min="0" max="180" inputmode="numeric"></label></div>
+<div id="pres"></div><div class="act"><button id="prc">Cerrar</button></div></dialog>
 <dialog id="perd"><div style="font-weight:700">Fechas de reporte y pago</div><div class="note" style="margin-top:2px">Si tu empresa paga los recargos y extras en una quincena posterior, indica el periodo reportado y la quincena en la que se pagan.</div>
 <label style="font-size:13px">Días sin periodo definido: se pagan<select id="plag"><option value="1">en la quincena siguiente</option><option value="0">en la misma quincena</option></select></label>
 <div id="pl"></div><button id="padd" style="margin:8px 0">＋ Agregar periodo</button><div class="act"><button id="pc">Cancelar</button><button id="ps" style="background:var(--acc);color:#fff">Guardar</button></div></dialog>
@@ -91,7 +97,7 @@ function pay(only){
  const inc=k=>A[k]=(A[k]||0)+1;
  for(let i=only||1;i<=(only||n);i++){const r=data[key(Y,M,i)]||{},t=CFG.t[r.s];let end=360;
   if(t){const a=mins(t[0]),dur=(mins(t[1])-a+1440)%1440||1440;end=a+dur;run(i,a,dur,(nt,d)=>{const k=d?(nt?'rdn':'rd'):(nt?'rn':null);if(k)inc(k)})}
-  if(r.o)run(i,end,Math.round(r.o*60),(nt,d)=>inc(d?(nt?'edn':'edd'):(nt?'en':'ed')))}
+  if(r.o)run(i,r.oh?mins(r.oh):end,Math.round(r.o*60),(nt,d)=>inc(d?(nt?'edn':'edd'):(nt?'en':'ed')))}
  let h='',tot=0;
  Object.keys(P).forEach(k=>{if(!A[k])return;const v=A[k]/60*base*P[k];tot+=v;h+='<div class="row"><span>'+LB[k]+' · '+(A[k]/60).toFixed(1).replace('.0','')+' h</span><span>'+(base?cop(v):'')+'</span></div>'});
  if(!base)h+='<div class="note">Pon tu salario en ⚙️ para ver los valores en pesos.</div>';
@@ -99,13 +105,13 @@ function pay(only){
  if(only)return h.split('<div class="note">')[0];$('pay').innerHTML=h}
 let dsh=null;
 function mkds(){$('ds').innerHTML='';['M','T','N'].concat(CFG.custom.map(c=>c.id)).forEach(id=>{const s=SH.find(x=>x.id===id),b=document.createElement('button');b.textContent=s.n;b.style.cssText='background:'+s.c+';color:#1b1f23;border:3px solid '+(dsh===id?'#000':'transparent');b.onclick=()=>{dsh=dsh===id?null:id;mkds();prev()};$('ds').appendChild(b)})}
-function prev(){const old=data[sel];data[sel]=Object.assign({},old||{},{s:dsh||undefined,o:parseFloat($('oh').value)||undefined,f:$('of').checked||undefined});const h=pay(+sel.slice(8)),dv=dayVal(+sel.slice(8));if(old)data[sel]=old;else delete data[sel];$('pv').innerHTML='<b>Cálculo del día</b>'+(h||'<div class="note">Sin recargos ni extras.</div>')+(dv?'<div class="row tot"><span>Valor del día</span><span>'+cop(dv)+'</span></div>':'')+((h&&CFG.sal>0)?'<div class="note">Recargos y extras de este día se pagan en la '+ql(payQ(pd(sel)))+'.</div>':'')+(CFG.sal>0?'':'<div class="note">Pon tu salario en ⚙️ para ver pesos.</div>')}
-$('oh').oninput=prev;$('of').onchange=prev;
+function prev(){const old=data[sel];data[sel]=Object.assign({},old||{},{s:dsh||undefined,o:parseFloat($('oh').value)||undefined,oh:$('ohs').value||undefined,f:$('of').checked||undefined});const h=pay(+sel.slice(8)),dv=dayVal(+sel.slice(8));if(old)data[sel]=old;else delete data[sel];$('pv').innerHTML='<b>Cálculo del día</b>'+(h||'<div class="note">Sin recargos ni extras.</div>')+((parseFloat($('oh').value)>0&&!$('ohs').value&&!CFG.t[dsh])?'<div class="note">Sin turno ni hora de inicio: las extras se cuentan desde las 6:00 a. m.</div>':'')+(dv?'<div class="row tot"><span>Valor del día</span><span>'+cop(dv)+'</span></div>':'')+((h&&CFG.sal>0)?'<div class="note">Recargos y extras de este día se pagan en la '+ql(payQ(pd(sel)))+'.</div>':'')+(CFG.sal>0?'':'<div class="note">Pon tu salario en ⚙️ para ver pesos.</div>')}
+$('oh').oninput=prev;$('ohs').oninput=prev;$('e1').onclick=()=>{$('oh').value=12;$('ohs').value='18:00';prev()};$('e2').onclick=()=>{$('oh').value=12;$('ohs').value='06:00';prev()};$('of').onchange=prev;
 const DN=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'],fd=d=>String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear(),iso=d=>key(d.getFullYear(),d.getMonth(),d.getDate()),pd=s=>{const p=s.split('-');return new Date(+p[0],+p[1]-1,+p[2])};
 function dayAgg(dt){const y=dt.getFullYear(),mo=dt.getMonth(),i=dt.getDate(),r=data[key(y,mo,i)]||{},t=CFG.t[r.s],A={};let wk=0,end=360;
  const go=(a,dur,ex)=>{for(let m=0;m<dur;m++){const x=new Date(y,mo,i,0,a+m),h=x.getHours(),nt=h>=19||h<6,d=x.getDay()===0||!!(data[iso(x)]||{}).f,c=ex?(d?(nt?'edn':'edd'):(nt?'en':'ed')):(d?(nt?'rdn':'rd'):(nt?'rn':null));if(c)A[c]=(A[c]||0)+1}};
  if(t){const a=mins(t[0]),dur=(mins(t[1])-a+1440)%1440||1440;wk=dur;end=a+dur;go(a,dur,0)}
- if(r.o)go(end,Math.round(r.o*60),1);
+ if(r.o)go(r.oh?mins(r.oh):end,Math.round(r.o*60),1);
  return{r,A,wk,ex:Math.round((r.o||0)*60)}}
 function report(f,t){
  const base=CFG.sal>0?CFG.sal/CFG.hrs:0,ks=Object.keys(P),W={},H=s=>({v:s,s:1}),vs=(A,l)=>l.reduce((s,k)=>s+(A[k]||0)/60*base*P[k],0),RL=['rn','rd','rdn'],EL=['ed','en','edd','edn'];
@@ -205,6 +211,24 @@ function quin(){if(!(CFG.sal>0)){$('qn').innerHTML='';return}
  let pen=0;Object.keys(data).forEach(k=>{if(k.slice(0,7)!==Y+'-'+String(M+1).padStart(2,'0'))return;const d=pd(k),q=payQ(d);if(q!==pre+'1'&&q!==pre+'2'){const x=dayAgg(d);pen+=vv(x.A,RLg)+vv(x.A,ELg)}});
  if(pen)h+='<div class="row"><span>Generado este mes, se paga en otra quincena</span><b>'+cop(pen)+'</b></div>';
  $('qn').innerHTML=h+'<div class="note">Estimado = salario ÷ 2 + los recargos y extras que tu empresa paga en esa quincena (según tus fechas de reporte)'+(CFG.aux?' + subsidio de transporte en la quincena que elegiste':'')+(CFG.dsc?' − descuentos':'')+'. Cada día trabajado vale salario ÷ 30 más lo que sume ese día.</div>'}
+function psOpts(){const t=new Date(),cy=t.getFullYear(),cs=t.getMonth()<6?1:2;let o='';[cy-1,cy].forEach(y=>[1,2].forEach(h=>{o+='<option value="'+y+'-'+h+'"'+(y===cy&&h===cs?' selected':'')+'>'+(h===1?'1.er semestre '+y+' (ene–jun)':'2.º semestre '+y+' (jul–dic)')+'</option>'}));return o}
+function openPr(){$('psem').innerHTML=psOpts();$('pmes').value='';$('pdias').value='';prest();$('prd').showModal()}
+function prest(){
+ if(!(CFG.sal>0)){$('pres').innerHTML='<div class="note">Pon tu salario en ⚙️ para ver los valores.</div>';return}
+ const sp=$('psem').value.split('-'),y=+sp[0],h=+sp[1],m0=h===1?0:6,A={},mm={};
+ for(let mo=m0;mo<m0+6;mo++){const n=new Date(y,mo+1,0).getDate();for(let i=1;i<=n;i++){const x=dayAgg(new Date(y,mo,i));if(x.r.s||x.ex||x.r.f)mm[mo]=1;for(const k in x.A)A[k]=(A[k]||0)+x.A[k]}}
+ const nm=Object.keys(mm).length||1,t=new Date(),st=new Date(y,m0,1),en=new Date(y,m0+6,0),da=t<st?0:t>en?180:Math.min(180,(t.getMonth()-m0)*30+Math.min(t.getDate(),30));
+ $('pmes').placeholder='auto: '+nm;$('pdias').placeholder='auto: '+da;
+ const mes=Math.max(1,parseFloat($('pmes').value)||nm),dv=$('pdias').value,dias=Math.min(180,dv===''?da:(parseFloat(dv)||0));
+ const pv=(vv(A,RLg)+vv(A,ELg))/mes,pn=vv(A,['rn'])/mes,aux=CFG.aux||0,base=CFG.sal+pv+aux,bvac=CFG.sal+pn;
+ const calc=d=>({p:base*d/360,c:base*d/360,i:base*d/360*d*.12/360,v:bvac*d/720}),a=calc(dias),f=calc(180);
+ let h1='';Object.keys(P).forEach(k=>{if(!A[k])return;h1+='<div class="g4"><span>'+LB[k].replace(/ \(.*/,'')+' <small>'+LB[k].match(/\(([^)]*)\)/)[1]+'</small></span><span>'+(A[k]/60).toFixed(1)+'</span><span>'+(A[k]/60/mes).toFixed(1)+'</span><span>'+cop(A[k]/60*bs()*P[k]/mes)+'</span></div>'});
+ h1=h1?'<div class="g4" style="font-weight:700"><span>Concepto</span><span>Horas</span><span>Prom. h/mes</span><span>Prom. $/mes</span></div>'+h1+'<div class="g4" style="font-weight:700"><span>Promedio mensual</span><span></span><span></span><span>'+cop(pv)+'</span></div>':'<div class="note">No hay recargos ni extras registrados en este semestre.</div>';
+ const R=[['Prima de servicios','8,33 % · 30 días/año',a.p,f.p],['Cesantías','8,33 % · 1 mes/año',a.c,f.c],['Intereses de cesantías','12 % anual de las cesantías',a.i,f.i],['Vacaciones','4,17 % · 15 días/año',a.v,f.v]];
+ const h2='<div class="g3" style="font-weight:700"><span></span><span>A la fecha ('+dias+' d)</span><span>Semestre (180 d)</span></div>'+R.map(r=>'<div class="g3"><span><b>'+r[0]+'</b><br><small>'+r[1]+'</small></span><span>'+cop(r[2])+'</span><span>'+cop(r[3])+'</span></div>').join('');
+ $('pres').innerHTML='<h2 style="font-size:15px;margin:10px 0 4px">Promedio de horas extras y recargos</h2>'+h1+'<div class="note">Promediado sobre '+mes+' mes(es) con datos. Cuenta por la fecha en que se generaron, no por la que te pagan.</div><h2 style="font-size:15px;margin:12px 0 4px">Primas y prestaciones</h2>'+h2+
+ '<div class="note">Base de prima y cesantías = salario '+cop(CFG.sal)+' + promedio de recargos y extras '+cop(pv)+(aux?' + auxilio '+cop(aux):'')+' = <b>'+cop(base)+'</b>.<br>Base de vacaciones = salario + promedio del recargo nocturno ordinario ('+cop(pn)+') = <b>'+cop(bvac)+'</b>. No incluye extras, trabajo dominical/festivo ni auxilio.<br>Fechas: prima hasta el 30 de junio y el 20 de diciembre · intereses al trabajador hasta el 31 de enero · cesantías al fondo hasta el 14 de febrero.<br>Es un estimado informativo, no una liquidación. Por ley las cesantías y vacaciones se promedian sobre el último año; aquí se usa el semestre elegido.</div>'}
+$('prb').onclick=openPr;$('prc').onclick=()=>$('prd').close();$('psem').onchange=()=>{$('pmes').value='';$('pdias').value='';prest()};$('pmes').oninput=$('pdias').oninput=prest;
 $('gear').onclick=()=>{$('sal').value=CFG.sal||'';$('aux').value=CFG.aux||'';$('dsc').value=CFG.dsc||'';$('auxq').value=CFG.auxq||'2';$('hrs').value=CFG.hrs;$('tms').innerHTML=['M','T','N'].map(id=>{const s=SH.find(x=>x.id===id);return '<div class="tr"><b>'+s.l+'</b><input type="time" data-id="'+id+'" data-i="0" value="'+CFG.t[id][0]+'"><input type="time" data-id="'+id+'" data-i="1" value="'+CFG.t[id][1]+'"></div>'}).join('');$('cfgd').showModal()};
 $('cc').onclick=()=>$('cfgd').close();
 $('cs').onclick=()=>{CFG.sal=parseFloat($('sal').value)||0;CFG.hrs=parseFloat($('hrs').value)||210;CFG.aux=parseFloat($('aux').value)||0;CFG.dsc=parseFloat($('dsc').value)||0;CFG.auxq=$('auxq').value;document.querySelectorAll('#tms input').forEach(e=>{if(e.value)CFG.t[e.dataset.id][+e.dataset.i]=e.value});try{localStorage.setItem('turnos-cfg',JSON.stringify(CFG))}catch(e){}$('cfgd').close();render()};
@@ -229,8 +253,8 @@ function render(){
 }
 function tap(i){const k=key(Y,M,i);
  if(mode==='P'){if(brush==='X'){if(data[k]){delete data[k].s;if(!data[k].o&&!data[k].t&&!data[k].f)delete data[k]}}else if(brush==='F'){const r=data[k]||{};r.f=r.f?undefined:true;data[k]=r;if(!r.s&&!r.o&&!r.t&&!r.f)delete data[k]}else{data[k]=Object.assign(data[k]||{},{s:brush})}save();render()}
- else{sel=k;const r=data[k]||{};$('dt').textContent=i+' de '+new Date(Y,M,1).toLocaleDateString('es',{month:'long'});$('oh').value=r.o||'';$('on').value=r.t||'';$('of').checked=!!r.f;dsh=r.s||null;mkds();prev();$('dlg').showModal()}}
-$('ok').onclick=()=>{const h=parseFloat($('oh').value)||0,t=$('on').value.trim();const r=data[sel]||{};r.o=h>0?h:undefined;r.t=t||undefined;r.f=$('of').checked||undefined;r.s=dsh||undefined;data[sel]=r;if(!r.s&&!r.o&&!r.t&&!r.f)delete data[sel];save();$('dlg').close();render()};
+ else{sel=k;const r=data[k]||{};$('dt').textContent=i+' de '+new Date(Y,M,1).toLocaleDateString('es',{month:'long'});$('oh').value=r.o||'';$('ohs').value=r.oh||'';$('on').value=r.t||'';$('of').checked=!!r.f;dsh=r.s||null;mkds();prev();$('dlg').showModal()}}
+$('ok').onclick=()=>{const h=parseFloat($('oh').value)||0,t=$('on').value.trim();const r=data[sel]||{};r.o=h>0?h:undefined;r.oh=(h>0&&$('ohs').value)||undefined;r.t=t||undefined;r.f=$('of').checked||undefined;r.s=dsh||undefined;data[sel]=r;if(!r.s&&!r.o&&!r.t&&!r.f)delete data[sel];save();$('dlg').close();render()};
 $('cx').onclick=()=>$('dlg').close();
 document.querySelectorAll('.qa button').forEach(b=>b.onclick=()=>{$('oh').value=b.dataset.h;prev()});
 $('mP').onclick=()=>{mode='P';render()};$('mE').onclick=()=>{mode='E';render()};
