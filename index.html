@@ -50,10 +50,12 @@ dialog input{font:inherit;width:100%;padding:8px;border-radius:8px;border:1px so
 <div id="pay"></div><div id="cnt"></div><div id="qn"></div><button id="pb" style="margin-top:8px;width:100%">📅 Fechas de reporte y pago de extras</button><button id="prb" style="margin-top:8px;width:100%">🎁 Primas y prestaciones (promedios)</button></div>
 <dialog id="dlg"><div id="dt" style="font-weight:700"></div>
 <div style="margin-top:6px;font-size:13px;color:var(--mut)">Turno del día</div><div class="qa" id="ds"></div>
-<label>Horas extras ese día<input id="oh" type="number" min="0" step="0.5" inputmode="decimal"></label>
+<label>Horas extras · bloque 1<input id="oh" type="number" min="0" step="0.5" inputmode="decimal"></label>
 <label>Las extras empiezan a las (vacío = al terminar el turno)<input id="ohs" type="time"></label>
 <div class="qb"><button id="e1">🌙 Extra 6 pm–6 am</button><button id="e2">☀️ Extra 6 am–6 pm</button></div>
 <div class="qa"><button data-h="0">0</button><button data-h="1">1</button><button data-h="2">2</button><button data-h="3">3</button><button data-h="4">4</button></div>
+<div style="margin-top:6px;font-size:13px;color:var(--mut)">Bloque 2 de extras (opcional). Si dejas la hora vacía, cuenta desde que termina el turno.</div>
+<div class="tr2" style="grid-template-columns:1fr 1fr"><label style="font-size:12px">Horas<input id="oh2" type="number" min="0" step="0.5" inputmode="decimal"></label><label style="font-size:12px">Empiezan a las<input id="ohs2" type="time"></label></div>
 <label>Nota (opcional)<input id="on" type="text" maxlength="80"></label>
 <label class="chk"><input id="of" type="checkbox">Día festivo (los domingos cuentan solos)</label>
 <div id="pv" class="sum" style="margin:6px 0;padding:8px"></div><div class="act"><button id="cx">Cancelar</button><button id="ok" style="background:var(--acc);color:#fff">Guardar</button></div></dialog>
@@ -97,7 +99,7 @@ function pay(only){
  const inc=k=>A[k]=(A[k]||0)+1;
  for(let i=only||1;i<=(only||n);i++){const r=data[key(Y,M,i)]||{},t=CFG.t[r.s];let end=360;
   if(t){const a=mins(t[0]),dur=(mins(t[1])-a+1440)%1440||1440;end=a+dur;run(i,a,dur,(nt,d)=>{const k=d?(nt?'rdn':'rd'):(nt?'rn':null);if(k)inc(k)})}
-  if(r.o)run(i,r.oh?mins(r.oh):end,Math.round(r.o*60),(nt,d)=>inc(d?(nt?'edn':'edd'):(nt?'en':'ed')))}
+  {const x2=r.o2||0,x1=(r.o||0)-x2,fx=(nt,d)=>inc(d?(nt?'edn':'edd'):(nt?'en':'ed'));if(x1>0)run(i,r.oh?mins(r.oh):end,Math.round(x1*60),fx);if(x2>0)run(i,r.oh2?mins(r.oh2):end,Math.round(x2*60),fx)}}
  let h='',tot=0;
  Object.keys(P).forEach(k=>{if(!A[k])return;const v=A[k]/60*base*P[k];tot+=v;h+='<div class="row"><span>'+LB[k]+' · '+(A[k]/60).toFixed(1).replace('.0','')+' h</span><span>'+(base?cop(v):'')+'</span></div>'});
  if(!base)h+='<div class="note">Pon tu salario en ⚙️ para ver los valores en pesos.</div>';
@@ -105,13 +107,13 @@ function pay(only){
  if(only)return h.split('<div class="note">')[0];$('pay').innerHTML=h}
 let dsh=null;
 function mkds(){$('ds').innerHTML='';['M','T','N'].concat(CFG.custom.map(c=>c.id)).forEach(id=>{const s=SH.find(x=>x.id===id),b=document.createElement('button');b.textContent=s.n;b.style.cssText='background:'+s.c+';color:#1b1f23;border:3px solid '+(dsh===id?'#000':'transparent');b.onclick=()=>{dsh=dsh===id?null:id;mkds();prev()};$('ds').appendChild(b)})}
-function prev(){const old=data[sel];data[sel]=Object.assign({},old||{},{s:dsh||undefined,o:parseFloat($('oh').value)||undefined,oh:$('ohs').value||undefined,f:$('of').checked||undefined});const h=pay(+sel.slice(8)),dv=dayVal(+sel.slice(8));if(old)data[sel]=old;else delete data[sel];$('pv').innerHTML='<b>Cálculo del día</b>'+(h||'<div class="note">Sin recargos ni extras.</div>')+((parseFloat($('oh').value)>0&&!$('ohs').value&&!CFG.t[dsh])?'<div class="note">Sin turno ni hora de inicio: las extras se cuentan desde las 6:00 a. m.</div>':'')+(dv?'<div class="row tot"><span>Valor del día</span><span>'+cop(dv)+'</span></div>':'')+((h&&CFG.sal>0)?'<div class="note">Recargos y extras de este día se pagan en la '+ql(payQ(pd(sel)))+'.</div>':'')+(CFG.sal>0?'':'<div class="note">Pon tu salario en ⚙️ para ver pesos.</div>')}
-$('oh').oninput=prev;$('ohs').oninput=prev;$('e1').onclick=()=>{$('oh').value=12;$('ohs').value='18:00';prev()};$('e2').onclick=()=>{$('oh').value=12;$('ohs').value='06:00';prev()};$('of').onchange=prev;
+function prev(){const old=data[sel];data[sel]=Object.assign({},old||{},{s:dsh||undefined,o:(parseFloat($('oh').value)||0)+(parseFloat($('oh2').value)||0)||undefined,oh:$('ohs').value||undefined,o2:parseFloat($('oh2').value)||undefined,oh2:$('ohs2').value||undefined,f:$('of').checked||undefined});const h=pay(+sel.slice(8)),dv=dayVal(+sel.slice(8));if(old)data[sel]=old;else delete data[sel];$('pv').innerHTML='<b>Cálculo del día</b>'+(h||'<div class="note">Sin recargos ni extras.</div>')+((parseFloat($('oh').value)>0&&!$('ohs').value&&!CFG.t[dsh])?'<div class="note">Sin turno ni hora de inicio: las extras se cuentan desde las 6:00 a. m.</div>':'')+(dv?'<div class="row tot"><span>Valor del día</span><span>'+cop(dv)+'</span></div>':'')+((h&&CFG.sal>0)?'<div class="note">Recargos y extras de este día se pagan en la '+ql(payQ(pd(sel)))+'.</div>':'')+(CFG.sal>0?'':'<div class="note">Pon tu salario en ⚙️ para ver pesos.</div>')}
+$('oh').oninput=prev;$('ohs').oninput=prev;$('oh2').oninput=prev;$('ohs2').oninput=prev;$('e1').onclick=()=>{$('oh').value=12;$('ohs').value='18:00';prev()};$('e2').onclick=()=>{$('oh').value=12;$('ohs').value='06:00';prev()};$('of').onchange=prev;
 const DN=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'],fd=d=>String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear(),iso=d=>key(d.getFullYear(),d.getMonth(),d.getDate()),pd=s=>{const p=s.split('-');return new Date(+p[0],+p[1]-1,+p[2])};
 function dayAgg(dt){const y=dt.getFullYear(),mo=dt.getMonth(),i=dt.getDate(),r=data[key(y,mo,i)]||{},t=CFG.t[r.s],A={};let wk=0,end=360;
  const go=(a,dur,ex)=>{for(let m=0;m<dur;m++){const x=new Date(y,mo,i,0,a+m),h=x.getHours(),nt=h>=19||h<6,d=x.getDay()===0||!!(data[iso(x)]||{}).f,c=ex?(d?(nt?'edn':'edd'):(nt?'en':'ed')):(d?(nt?'rdn':'rd'):(nt?'rn':null));if(c)A[c]=(A[c]||0)+1}};
  if(t){const a=mins(t[0]),dur=(mins(t[1])-a+1440)%1440||1440;wk=dur;end=a+dur;go(a,dur,0)}
- if(r.o)go(r.oh?mins(r.oh):end,Math.round(r.o*60),1);
+ const x2=r.o2||0,x1=(r.o||0)-x2;if(x1>0)go(r.oh?mins(r.oh):end,Math.round(x1*60),1);if(x2>0)go(r.oh2?mins(r.oh2):end,Math.round(x2*60),1);
  return{r,A,wk,ex:Math.round((r.o||0)*60)}}
 function report(f,t){
  const base=CFG.sal>0?CFG.sal/CFG.hrs:0,ks=Object.keys(P),W={},H=s=>({v:s,s:1}),vs=(A,l)=>l.reduce((s,k)=>s+(A[k]||0)/60*base*P[k],0),RL=['rn','rd','rdn'],EL=['ed','en','edd','edn'];
@@ -253,8 +255,8 @@ function render(){
 }
 function tap(i){const k=key(Y,M,i);
  if(mode==='P'){if(brush==='X'){if(data[k]){delete data[k].s;if(!data[k].o&&!data[k].t&&!data[k].f)delete data[k]}}else if(brush==='F'){const r=data[k]||{};r.f=r.f?undefined:true;data[k]=r;if(!r.s&&!r.o&&!r.t&&!r.f)delete data[k]}else{data[k]=Object.assign(data[k]||{},{s:brush})}save();render()}
- else{sel=k;const r=data[k]||{};$('dt').textContent=i+' de '+new Date(Y,M,1).toLocaleDateString('es',{month:'long'});$('oh').value=r.o||'';$('ohs').value=r.oh||'';$('on').value=r.t||'';$('of').checked=!!r.f;dsh=r.s||null;mkds();prev();$('dlg').showModal()}}
-$('ok').onclick=()=>{const h=parseFloat($('oh').value)||0,t=$('on').value.trim();const r=data[sel]||{};r.o=h>0?h:undefined;r.oh=(h>0&&$('ohs').value)||undefined;r.t=t||undefined;r.f=$('of').checked||undefined;r.s=dsh||undefined;data[sel]=r;if(!r.s&&!r.o&&!r.t&&!r.f)delete data[sel];save();$('dlg').close();render()};
+ else{sel=k;const r=data[k]||{};$('dt').textContent=i+' de '+new Date(Y,M,1).toLocaleDateString('es',{month:'long'});$('oh').value=(r.o?(r.o-(r.o2||0))||'':'');$('ohs').value=r.oh||'';$('oh2').value=r.o2||'';$('ohs2').value=r.oh2||'';$('on').value=r.t||'';$('of').checked=!!r.f;dsh=r.s||null;mkds();prev();$('dlg').showModal()}}
+$('ok').onclick=()=>{const h1=parseFloat($('oh').value)||0,h2=parseFloat($('oh2').value)||0,h=h1+h2,t=$('on').value.trim();const r=data[sel]||{};r.o=h>0?h:undefined;r.oh=(h1>0&&$('ohs').value)||undefined;r.o2=h2>0?h2:undefined;r.oh2=(h2>0&&$('ohs2').value)||undefined;r.t=t||undefined;r.f=$('of').checked||undefined;r.s=dsh||undefined;data[sel]=r;if(!r.s&&!r.o&&!r.t&&!r.f)delete data[sel];save();$('dlg').close();render()};
 $('cx').onclick=()=>$('dlg').close();
 document.querySelectorAll('.qa button').forEach(b=>b.onclick=()=>{$('oh').value=b.dataset.h;prev()});
 $('mP').onclick=()=>{mode='P';render()};$('mE').onclick=()=>{mode='E';render()};
