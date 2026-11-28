@@ -20,7 +20,7 @@ button{font:inherit;color:inherit;background:var(--card);border:1px solid var(--
 .modes .on{background:var(--acc);color:#fff;border-color:var(--acc)}
 .dow,.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
 .dow div{text-align:center;font-size:12px;color:var(--mut);padding:2px 0}
-.dialog-x{}dialog{max-height:90vh}dialog select{font:inherit;width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);margin:4px 0}.g4,.g3{display:grid;gap:4px;font-size:12.5px;padding:4px 0;border-bottom:1px solid var(--line);align-items:center}.g4{grid-template-columns:1.7fr .8fr .9fr 1fr}.g3{grid-template-columns:1.5fr 1fr 1fr}.g4 span+span,.g3 span+span{text-align:right}.day .v{font-size:11px;text-align:center;font-weight:700;color:#0b4f4a}.day{min-height:74px;border-radius:8px;padding:3px 4px;background:#fff;border:1px solid var(--line);display:flex;flex-direction:column;justify-content:space-between;color:#1b1f23;cursor:pointer;user-select:none}
+.dialog-x{}dialog{max-height:90vh}dialog select{font:inherit;width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);margin:4px 0}.mk{font-size:11px;margin-right:2px}.g4,.g3{display:grid;gap:4px;font-size:12.5px;padding:4px 0;border-bottom:1px solid var(--line);align-items:center}.g4{grid-template-columns:1.7fr .8fr .9fr 1fr}.g3{grid-template-columns:1.5fr 1fr 1fr}.g4 span+span,.g3 span+span{text-align:right}.day .v{font-size:11px;text-align:center;font-weight:700;color:#0b4f4a}.day{min-height:74px;border-radius:8px;padding:3px 4px;background:#fff;border:1px solid var(--line);display:flex;flex-direction:column;justify-content:space-between;color:#1b1f23;cursor:pointer;user-select:none}
 .day.empty{visibility:hidden}
 .day .n{font-size:17px;font-weight:800;text-align:right;color:#000;line-height:1.1}.day.dom .n{color:#b00020}
 .day .t{text-align:center;font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden}.hr{border-bottom:1px solid var(--line);padding:6px 0}.tr2{display:grid;grid-template-columns:1fr 1fr auto;gap:6px;align-items:center}
@@ -45,7 +45,7 @@ dialog input{font:inherit;width:100%;padding:8px;border-radius:8px;border:1px so
 <div class="hint" id="hint"></div>
 <div class="dow"><div>DOM</div><div>LUN</div><div>MAR</div><div>MIÉ</div><div>JUE</div><div>VIE</div><div>SÁB</div></div>
 <div class="grid" id="grid"></div>
-<div class="sum"><h2>Resumen del mes</h2>
+<div class="sum"><h2>Resumen del mes</h2><div id="prx"></div>
 <div class="row"><span>Horas extras</span><span class="big" id="ot">0</span></div>
 <div id="pay"></div><div id="cnt"></div><div id="qn"></div><button id="pb" style="margin-top:8px;width:100%">📅 Fechas de reporte y pago de extras</button><button id="prb" style="margin-top:8px;width:100%">🎁 Primas y prestaciones (promedios)</button></div>
 <dialog id="dlg"><div id="dt" style="font-weight:700"></div>
@@ -65,7 +65,7 @@ dialog input{font:inherit;width:100%;padding:8px;border-radius:8px;border:1px so
 <div id="pres"></div><div class="act"><button id="prc">Cerrar</button></div></dialog>
 <dialog id="perd"><div style="font-weight:700">Fechas de reporte y pago</div><div class="note" style="margin-top:2px">Si tu empresa paga los recargos y extras en una quincena posterior, indica el periodo reportado y la quincena en la que se pagan.</div>
 <label style="font-size:13px">Días sin periodo definido: se pagan<select id="plag"><option value="1">en la quincena siguiente</option><option value="0">en la misma quincena</option></select></label>
-<div id="pl"></div><button id="padd" style="margin:8px 0">＋ Agregar periodo</button><div class="act"><button id="pc">Cancelar</button><button id="ps" style="background:var(--acc);color:#fff">Guardar</button></div></dialog>
+<button id="pcal" style="margin:8px 0;width:100%">📥 Cargar calendario Grupo Lux 2026</button><div id="pl"></div><button id="padd" style="margin:8px 0">＋ Agregar periodo</button><div class="act"><button id="pc">Cancelar</button><button id="ps" style="background:var(--acc);color:#fff">Guardar</button></div></dialog>
 <dialog id="hd"><div style="font-weight:700">Mis horarios</div><div class="note" style="margin-top:2px">Horarios distintos a Mañana, Tarde y Noche. Salen para pintar después de los horarios normales. Si borras uno, se quita de los días donde lo pintaste.</div><div id="hl"></div><button id="hadd" style="margin:8px 0">＋ Agregar horario</button><div class="act"><button id="hc">Cancelar</button><button id="hs" style="background:var(--acc);color:#fff">Guardar</button></div></dialog>
 <dialog id="repd"><div style="font-weight:700">Reporte en Excel</div>
 <label>Desde<input id="rf" type="date"></label><label>Hasta<input id="rt" type="date"></label>
@@ -196,14 +196,14 @@ function payQ(d){const s=iso(d),p=(CFG.per||[]).find(p=>s>=p.f&&s<=p.t);if(p)ret
 function payMap(){const R={};Object.keys(data).forEach(k=>{const d=pd(k),x=dayAgg(d),vr=vv(x.A,RLg),ve=vv(x.A,ELg);if(!vr&&!ve)return;const q=payQ(d),o=R[q]||(R[q]={vr:0,ve:0,f:k,t:k});o.vr+=vr;o.ve+=ve;if(k<o.f)o.f=k;if(k>o.t)o.t=k});return R}
 function qopts(sel){let o='';for(let k=-4;k<=4;k++){const d=new Date(Y,M+k,1);[1,2].forEach(q=>{const v=d.getFullYear()+'-'+d.getMonth()+'-'+q;o+='<option value="'+v+'"'+(v===sel?' selected':'')+'>'+ql(v)+'</option>'})}
  if(sel&&o.indexOf('value="'+sel+'"')<0)o+='<option value="'+sel+'" selected>'+ql(sel)+'</option>';return o}
-const prow=p=>'<div class="hr"><div class="tr2" style="grid-template-columns:1fr 1fr"><label style="font-size:12px">Reporte desde<input type="date" class="pf" value="'+p.f+'"></label><label style="font-size:12px">Hasta<input type="date" class="pt" value="'+p.t+'"></label></div><div class="tr2" style="grid-template-columns:1fr auto;margin-top:4px"><label style="font-size:12px">Se paga en<select class="pq">'+qopts(p.q)+'</select></label><button class="px">🗑</button></div></div>';
+const prow=p=>'<div class="hr" data-c="'+(p.c||'')+'" data-pg="'+(p.pg||'')+'"><div class="tr2" style="grid-template-columns:1fr 1fr"><label style="font-size:12px">Reporte desde<input type="date" class="pf" value="'+p.f+'"></label><label style="font-size:12px">Hasta<input type="date" class="pt" value="'+p.t+'"></label></div><div class="tr2" style="grid-template-columns:1fr auto;margin-top:4px"><label style="font-size:12px">Se paga en<select class="pq">'+qopts(p.q)+'</select></label><button class="px">🗑</button></div>'+(p.c?'<div class="note" style="margin-top:2px">Cierre de novedades: '+fd(pd(p.c))+(p.pg?' · pago de nómina: '+fd(pd(p.pg)):'')+'</div>':'')+'</div>';
 function newP(){const L=[].slice.call(document.querySelectorAll('#pl .hr')),last=L.length?L[L.length-1]:null;let f;
  if(last&&last.querySelector('.pt').value){const e=pd(last.querySelector('.pt').value);f=new Date(e.getFullYear(),e.getMonth(),e.getDate()+1)}else{const n=new Date();f=n.getDate()<=15?new Date(n.getFullYear(),n.getMonth()-1,16):new Date(n.getFullYear(),n.getMonth(),1)}
  const t=f.getDate()===1?new Date(f.getFullYear(),f.getMonth(),15):new Date(f.getFullYear(),f.getMonth()+1,0);return{f:iso(f),t:iso(t),q:nextQ(qOf(t))}}
 function bindP(){document.querySelectorAll('#pl .px').forEach(b=>b.onclick=()=>b.closest('.hr').remove())}
 function openP(){$('pl').innerHTML=(CFG.per||[]).map(prow).join('');$('plag').value=CFG.lag===0?'0':'1';bindP();$('perd').showModal()}
 $('padd').onclick=()=>{$('pl').insertAdjacentHTML('beforeend',prow(newP()));bindP()};
-$('ps').onclick=()=>{const L=[];document.querySelectorAll('#pl .hr').forEach(r=>{const f=r.querySelector('.pf').value,t=r.querySelector('.pt').value;if(f&&t&&f<=t)L.push({f,t,q:r.querySelector('.pq').value})});L.sort((a,b)=>a.f<b.f?-1:1);CFG.per=L;CFG.lag=+$('plag').value;try{localStorage.setItem('turnos-cfg',JSON.stringify(CFG))}catch(e){}$('perd').close();render()};
+$('ps').onclick=()=>{const L=[];document.querySelectorAll('#pl .hr').forEach(r=>{const f=r.querySelector('.pf').value,t=r.querySelector('.pt').value;if(f&&t&&f<=t)L.push({f,t,q:r.querySelector('.pq').value,c:r.dataset.c||undefined,pg:r.dataset.pg||undefined})});L.sort((a,b)=>a.f<b.f?-1:1);CFG.per=L;CFG.lag=+$('plag').value;try{localStorage.setItem('turnos-cfg',JSON.stringify(CFG))}catch(e){}$('perd').close();render()};
 $('pc').onclick=()=>$('perd').close();$('pb').onclick=openP;
 function quin(){if(!(CFG.sal>0)){$('qn').innerHTML='';return}
  const n=new Date(Y,M+1,0).getDate(),mn=new Date(Y,M,1).toLocaleDateString('es',{month:'short'}),pm=payMap(),pre=Y+'-'+M+'-';let h='<h2 style="margin-top:14px">Pago por quincena</h2>';
@@ -229,8 +229,19 @@ function prest(){
  const R=[['Prima de servicios','8,33 % · 30 días/año',a.p,f.p],['Cesantías','8,33 % · 1 mes/año',a.c,f.c],['Intereses de cesantías','12 % anual de las cesantías',a.i,f.i],['Vacaciones','4,17 % · 15 días/año',a.v,f.v]];
  const h2='<div class="g3" style="font-weight:700"><span></span><span>A la fecha ('+dias+' d)</span><span>Semestre (180 d)</span></div>'+R.map(r=>'<div class="g3"><span><b>'+r[0]+'</b><br><small>'+r[1]+'</small></span><span>'+cop(r[2])+'</span><span>'+cop(r[3])+'</span></div>').join('');
  $('pres').innerHTML='<h2 style="font-size:15px;margin:10px 0 4px">Promedio de horas extras y recargos</h2>'+h1+'<div class="note">Promediado sobre '+mes+' mes(es) con datos. Cuenta por la fecha en que se generaron, no por la que te pagan.</div><h2 style="font-size:15px;margin:12px 0 4px">Primas y prestaciones</h2>'+h2+
- '<div class="note">Base de prima y cesantías = salario '+cop(CFG.sal)+' + promedio de recargos y extras '+cop(pv)+(aux?' + auxilio '+cop(aux):'')+' = <b>'+cop(base)+'</b>.<br>Base de vacaciones = salario + promedio del recargo nocturno ordinario ('+cop(pn)+') = <b>'+cop(bvac)+'</b>. No incluye extras, trabajo dominical/festivo ni auxilio.<br>Fechas: prima hasta el 30 de junio y el 20 de diciembre · intereses al trabajador hasta el 31 de enero · cesantías al fondo hasta el 14 de febrero.<br>Es un estimado informativo, no una liquidación. Por ley las cesantías y vacaciones se promedian sobre el último año; aquí se usa el semestre elegido.</div>'}
+ '<div class="note">Base de prima y cesantías = salario '+cop(CFG.sal)+' + promedio de recargos y extras '+cop(pv)+(aux?' + auxilio '+cop(aux):'')+' = <b>'+cop(base)+'</b>.<br>Base de vacaciones = salario + promedio del recargo nocturno ordinario ('+cop(pn)+') = <b>'+cop(bvac)+'</b>. No incluye extras, trabajo dominical/festivo ni auxilio.<br>En tu empresa (calendario 2026): prima el 12 de junio y el 15 de diciembre · cesantías e intereses el 5 de febrero. Plazos legales: prima 30 de junio y 20 de diciembre · intereses hasta el 31 de enero · cesantías al fondo hasta el 14 de febrero.<br>Es un estimado informativo, no una liquidación. Por ley las cesantías y vacaciones se promedian sobre el último año; aquí se usa el semestre elegido.</div>'}
 $('prb').onclick=openPr;$('prc').onclick=()=>$('prd').close();$('psem').onchange=()=>{$('pmes').value='';$('pdias').value='';prest()};$('pmes').oninput=$('pdias').oninput=prest;
+const CAL={cortes:['2026-01-11','2026-02-01','2026-02-15','2026-03-01','2026-03-15','2026-03-29','2026-04-12','2026-05-03','2026-05-17','2026-05-31','2026-06-14','2026-06-28','2026-07-12','2026-08-02','2026-08-16','2026-08-30','2026-09-13','2026-09-27','2026-10-18','2026-11-01','2026-11-15','2026-11-29','2026-12-13','2026-12-27','2027-01-17','2027-01-31'],
+ pagos:['2026-01-15','2026-01-30','2026-02-13','2026-02-27','2026-03-13','2026-03-30','2026-04-15','2026-04-30','2026-05-15','2026-05-29','2026-06-12','2026-06-30','2026-07-15','2026-07-30','2026-08-14','2026-08-28','2026-09-15','2026-09-30','2026-10-15','2026-10-30','2026-11-13','2026-11-30','2026-12-15','2026-12-29','2027-01-15','2027-01-29'],
+ prest:{'2026-02-05':'Cesantías e intereses de cesantías','2026-06-12':'Prima de servicios de junio','2026-12-15':'Prima de servicios de diciembre'}};
+const addD=(s,n)=>{const d=pd(s);return iso(new Date(d.getFullYear(),d.getMonth(),d.getDate()+n))};
+function calPer(){return CAL.cortes.map((c,k)=>{const pg=CAL.pagos[k+1]||null,q=pg?pg.slice(0,4)+'-'+(+pg.slice(5,7)-1)+'-'+(+pg.slice(8)<=15?1:2):'2027-1-1';return{f:addD(k?CAL.cortes[k-1]:'2025-12-28',1),t:c,q,c,pg}})}
+if(!CFG.calLoaded&&!(CFG.per&&CFG.per.length)){CFG.per=calPer();CFG.calLoaded=true;try{localStorage.setItem('turnos-cfg',JSON.stringify(CFG))}catch(e){}}
+const mk=k=>CAL.cortes.indexOf(k)>=0?'<span class="mk">📌</span>':CAL.pagos.indexOf(k)>=0?'<span class="mk">💵</span>':'';
+function prox(){const t=new Date(),td=iso(new Date(t.getFullYear(),t.getMonth(),t.getDate())),nx=a=>a.filter(x=>x>=td).sort()[0],c=nx(CAL.cortes),p=nx(CAL.pagos),pr=nx(Object.keys(CAL.prest));
+ const lab=s=>{if(!s)return'—';const d=pd(s),n=Math.round((d-pd(td))/864e5);return DN[d.getDay()]+' '+d.getDate()+' '+d.toLocaleDateString('es',{month:'short'})+(n===0?' (hoy)':n===1?' (mañana)':' (en '+n+' días)')};
+ $('prx').innerHTML='<div class="note" style="margin:0 0 8px;font-size:13px;color:var(--fg)">📌 Próximo cierre de novedades: <b>'+lab(c)+'</b><br>💵 Próximo pago de nómina: <b>'+lab(p)+'</b>'+(pr?'<br>🎁 '+CAL.prest[pr]+': <b>'+lab(pr)+'</b>':'')+'</div>'}
+$('pcal').onclick=()=>{$('pl').innerHTML=calPer().map(prow).join('');bindP()};
 $('gear').onclick=()=>{$('sal').value=CFG.sal||'';$('aux').value=CFG.aux||'';$('dsc').value=CFG.dsc||'';$('auxq').value=CFG.auxq||'2';$('hrs').value=CFG.hrs;$('tms').innerHTML=['M','T','N'].map(id=>{const s=SH.find(x=>x.id===id);return '<div class="tr"><b>'+s.l+'</b><input type="time" data-id="'+id+'" data-i="0" value="'+CFG.t[id][0]+'"><input type="time" data-id="'+id+'" data-i="1" value="'+CFG.t[id][1]+'"></div>'}).join('');$('cfgd').showModal()};
 $('cc').onclick=()=>$('cfgd').close();
 $('cs').onclick=()=>{CFG.sal=parseFloat($('sal').value)||0;CFG.hrs=parseFloat($('hrs').value)||210;CFG.aux=parseFloat($('aux').value)||0;CFG.dsc=parseFloat($('dsc').value)||0;CFG.auxq=$('auxq').value;document.querySelectorAll('#tms input').forEach(e=>{if(e.value)CFG.t[e.dataset.id][+e.dataset.i]=e.value});try{localStorage.setItem('turnos-cfg',JSON.stringify(CFG))}catch(e){}$('cfgd').close();render()};
@@ -247,10 +258,10 @@ function render(){
  for(let i=1;i<=n;i++){const k=key(Y,M,i),r=data[k]||{},s=SH.find(x=>x.id===r.s);
   const dv=dayVal(i),c=document.createElement('div');c.className='day'+(td.getFullYear()===Y&&td.getMonth()===M&&td.getDate()===i?' today':'')+(new Date(Y,M,i).getDay()===0||r.f?' dom':'');
   if(s)c.style.background=s.c;
-  c.innerHTML='<div class="n">'+(r.f?'★ ':'')+i+'</div><div class="t">'+(s?s.l:'')+'</div>'+(r.o?'<div class="o">+'+r.o+'h</div>':'')+(dv?'<div class="v">'+cop2(dv)+'</div>':'<div></div>');
+  c.innerHTML='<div class="n">'+mk(k)+(r.f?'★ ':'')+i+'</div><div class="t">'+(s?s.l:'')+'</div>'+(r.o?'<div class="o">+'+r.o+'h</div>':'')+(dv?'<div class="v">'+cop2(dv)+'</div>':'<div></div>');
   if(r.o)ot+=r.o;if(s)cnt[s.n]=(cnt[s.n]||0)+1;
   c.onclick=()=>tap(i);g.appendChild(c)}
- $('ot').textContent=ot+' h';pay();quin();
+ $('ot').textContent=ot+' h';pay();quin();prox();
  $('cnt').innerHTML=Object.entries(cnt).map(([a,b])=>'<div class="row"><span>'+a+'</span><span>'+b+' días</span></div>').join('');
 }
 function tap(i){const k=key(Y,M,i);
